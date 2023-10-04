@@ -30,11 +30,12 @@
 				<address itemprop="address" itemscope="" itemtype="http://schema.org/PostalAddress">
 					<strong><?php echo $text_address; ?></strong><br />
 					<span itemprop="streetAddress">
-                    <?php /* if (isset($GLOBALS['geo'])) {?>
+                    <?php  if (isset($GLOBALS['geo'])) {?>
                     г. <?php echo $GLOBALS['geo']->city; ?>,
-                    <?php } else{ ?> 
-                    <?php } */ ?>
-           г. Новосибирск, ул. Центральная 7
+                    <?php } else{ ?>
+                        г. Новосибирск,
+                    <?php }  ?>
+                        ул. Центральная 7
           </span>
 				</address>
 				<?php if ($geocode) { ?>
