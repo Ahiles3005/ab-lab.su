@@ -79,16 +79,14 @@ class ControllerCommonHeader extends Controller {
 		$data['name'] = $this->config->get('config_name');
 
 			//echo getSubDomain($_SERVER['SERVER_NAME']);
-
-
-		// if (isset($GLOBALS['geo'])) {
-		// 	$data['title'] = $data['title'] . ' в ' . $GLOBALS['geo']->city_locative; 
-		// 	$data['title'] = str_replace('Новосибирске', $GLOBALS['geo']->city_locative, $data['title']);
-		// 	$data['name'] = $data['name'] . ' г. ' . $GLOBALS['geo']->city; 
-		// 	$data['description'] = str_replace('Новосибирске', $GLOBALS['geo']->city_locative, $data['description']);
-		// 	$data['description'] = str_replace('Новосибирску', $GLOBALS['geo']->city_dative, $data['description']);
-		// }
-
+        
+		 if (isset($GLOBALS['geo'])) {
+		 	$data['title'] = $data['title'] . ' в ' . $GLOBALS['geo']->city_locative;
+		 	$data['title'] = str_replace('Новосибирске', $GLOBALS['geo']->city_locative, $data['title']);
+		 	$data['name'] = $data['name'] . ' г. ' . $GLOBALS['geo']->city;
+		 	$data['description'] = str_replace('Новосибирске', $GLOBALS['geo']->city_locative, $data['description']);
+		 	$data['description'] = str_replace('Новосибирску', $GLOBALS['geo']->city_dative, $data['description']);
+		 }
 
 
 		if (is_file(DIR_IMAGE . $this->config->get('config_logo'))) {
