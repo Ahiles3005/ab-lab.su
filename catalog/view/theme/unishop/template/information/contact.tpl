@@ -69,7 +69,7 @@
 				</div>
 			<?php } ?>
 		</div>
-		<hr /><script type="text/javascript" charset="utf-8" async src="https://api-maps.yandex.ru/services/constructor/1.0/js/?um=constructor%3A387ba8717cbc88bc23aabb9d59f1a61bec963a0510c245d438fcf02ea726e8f8&amp;width=100%25&amp;height=300&amp;lang=ru_RU&amp;scroll=true"></script>
+		<!--hr /><script type="text/javascript" charset="utf-8" async src="https://api-maps.yandex.ru/services/constructor/1.0/js/?um=constructor%3A387ba8717cbc88bc23aabb9d59f1a61bec963a0510c245d438fcf02ea726e8f8&amp;width=100%25&amp;height=300&amp;lang=ru_RU&amp;scroll=true"></script-->
 		<?php if($text_in_contacts) { ?>
 			<div class="row">
 				<div class="col-sm-12">

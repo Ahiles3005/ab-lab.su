@@ -79,7 +79,7 @@ class ControllerCommonHeader extends Controller {
 		$data['name'] = $this->config->get('config_name');
 
 			//echo getSubDomain($_SERVER['SERVER_NAME']);
-        
+
 		 if (isset($GLOBALS['geo'])) {
 		 	$data['title'] = $data['title'] . ' в ' . $GLOBALS['geo']->city_locative;
 		 	$data['title'] = str_replace('Новосибирске', $GLOBALS['geo']->city_locative, $data['title']);

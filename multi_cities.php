@@ -22,4 +22,8 @@ if (count($level) == 3) {
     $mysqli->close();
 } else {
     define('HTTPS_SERVER', 'https://ab-lab.su/');
+    $res = $mysqli->query("SELECT * FROM `geo` WHERE  `city_en` = 'Moskva' LIMIT 1");
+    $GLOBALS['geo'] = $res->fetch_object();
+    //print_r($GLOBALS['geo']);
+    $mysqli->close();
 }
