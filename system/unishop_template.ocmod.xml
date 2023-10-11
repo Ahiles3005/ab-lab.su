@@ -1,0 +1,924 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<modification>
+<name>UniShop template</name>
+<code>UniShop template</code>
+<version>2.2.0.3</version>
+<author>spectrum</author>
+	<file path="catalog/controller/{common,startup}/seo_url.php">
+		<operation error="skip">
+			<search><![CDATA[if ($url[0] == 'information_id') {]]></search>
+			<add position="before"><![CDATA[
+			if ($url[0] == 'news_id') {
+				$this->request->get['news_id'] = $url[1];
+			}
+			]]></add>
+		</operation>
+		<operation error="skip">
+			<search><![CDATA[$url[0] != 'information_id']]></search>
+			<add position="replace"><![CDATA[$url[0] != 'news_id' && $url[0] != 'information_id']]></add>
+		</operation>
+		<operation error="skip">
+			<search><![CDATA[} elseif (isset($this->request->get['information_id'])) {]]></search>
+			<add position="before"><![CDATA[
+			} elseif (isset($this->request->get['news_id'])) {
+				$this->request->get['route'] = 'information/uni_news';
+			]]></add>
+		</operation>
+		<operation error="skip">
+			<search><![CDATA[} elseif ($key == 'path') {]]></search>
+			<add position="replace"><![CDATA[
+			} elseif ($data['route'] == 'information/uni_news' && $key == 'news_id') {
+				$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "url_alias WHERE `query` = '" . $this->db->escape($key . '=' . (int)$value) . "'");
+				if ($query->num_rows && $query->row['keyword']) {
+					$url .= $query->row['keyword'];
+					unset($data[$key]);
+				}
+			} elseif ($data['route'] == 'information/uni_news') {			
+				$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "url_alias WHERE `query` = '" . $this->db->escape($value) . "'");
+				if ($query->num_rows && $query->row['keyword']) {
+					$url .= '/' . $query->row['keyword'] . '/';
+					//unset($data[$key]);
+				}
+			} elseif ($key == 'path') {]]></add>
+		</operation>
+    </file>
+	<file path="catalog/controller/{common,startup}/seo_pro.php">
+		<operation>
+			<search><![CDATA[$this->request->get['route'] = 'information/information';]]></search>
+			<add position="after" error="skip"><![CDATA[
+			} elseif (isset($this->request->get['news_id'])) {
+				$this->request->get['route'] = 'information/uni_news';]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[case 'path':]]></search>
+			<add position="before" error="skip"><![CDATA[
+			case 'news_id':
+				$queries[] = 'information/uni_news';
+				$queries[] = $key.'='.$value;
+				unset($data[$key]);
+				$postfix = 1;
+				break;
+			]]></add>
+		</operation>
+    </file>
+	<file path="catalog/controller/common/{column_left,column_right}.php">
+		<operation>
+			<search><![CDATA[$layout_id = 0;]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$data['route'] = isset($this->request->get['route']) ? $this->request->get['route'] : '';
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/common/header.php">
+		<operation>
+			<search><![CDATA[$this->config->get('config_telephone');]]></search>
+			<add position="after" error="skip"><![CDATA[			
+			$data['store_id'] = $this->config->get('config_store_id');
+			
+			$data['lang_1'] = array_merge($data, $this->language->load('unishop/unishop'));
+			
+			$data['contact'] = $this->url->link('information/contact');
+			$data['route'] = isset($this->request->get['route']) ? $this->request->get['route'] : '';
+
+			$data['customer_name'] = $this->customer->getFirstName() ? $this->customer->getFirstName() : '';
+			
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$data['show_meta_robots'] = isset($uniset['show_meta_robots']) ? $uniset['show_meta_robots'] : '';
+			$data['default_view'] = isset($uniset['default_view']) ? $uniset['default_view'] : 'grid';
+			
+			$data['custom_style'] = isset($uniset['custom_style']) ? $uniset['custom_style'] : '';
+			$data['background_image'] = isset($uniset['background_image']) && $uniset['background_image'] != '' ? $uniset['background_image'] : '';
+			$data['user_css'] = isset($uniset['user_css']) ? html_entity_decode($uniset['user_css'], ENT_QUOTES, 'UTF-8') : '';
+			$data['user_js'] = isset($uniset['user_js']) ? html_entity_decode($uniset['user_js'], ENT_QUOTES, 'UTF-8') : '';
+
+			$data['show_login'] = isset($uniset['show_login']) ? $uniset['show_login'] : '';
+			$data['show_register'] = isset($uniset['show_register']) ? $uniset['show_register'] : '';
+			$data['menu_schema'] = isset($uniset['menu_schema']) ? $uniset['menu_schema'] : array();
+			$data['headerlinks'] = isset($uniset[$lang_id]['headerlinks']) ? $uniset[$lang_id]['headerlinks'] : array();
+			$data['headerlinks2'] = isset($uniset[$lang_id]['headerlinks2']) ? $uniset[$lang_id]['headerlinks2'] : array();
+			$data['callback'] = isset($uniset['show_callback']) ? $uniset['show_callback'] : '';
+			$data['phone1'] = $this->config->get('config_telephone');
+			
+			$data['phones'] = array();
+			
+			if(isset($uniset['phones'])) {
+				foreach($uniset['phones'] as $phone) {		
+					if($phone['type'] == '?call' || $phone['type'] == '?chat') {
+						$type = 'skype:'.$phone['number'].$phone['type'];
+					} else {
+						$type = $phone['type'] != '' ? $phone['type'].$phone['number'] : '';
+					}
+			
+					$data['phones'][] = array(
+						'type' => $type,
+						'number' => $phone['number'],
+						'icon' => $phone['icon'],
+					);
+				}
+			}
+			
+			$text_in_add_contacts = isset($uniset[$lang_id]['text_in_add_contacts']) ? html_entity_decode($uniset[$lang_id]['text_in_add_contacts'], ENT_QUOTES, 'UTF-8') : '';
+			$data['text_in_add_contacts'] = str_replace('<p><br></p>', '', $text_in_add_contacts) != '' ? $text_in_add_contacts : '';
+
+			$data['text_in_add_contacts_position'] = isset($uniset['text_in_add_contacts_position']) ? $uniset['text_in_add_contacts_position'] : '';
+			
+			$data['fax'] = $this->config->get('config_fax');
+			$data['mail'] = $this->config->get('config_email');
+			$data['delivery_hours'] = isset($uniset[$lang_id]['delivery_hours']) ? $uniset[$lang_id]['delivery_hours'] : '';
+			$data['text_menu'] = isset($uniset[$lang_id]['text_menu']) ? $uniset[$lang_id]['text_menu'] : '';
+			
+			$data['menu_links_disabled'] = isset($uniset['menu_links_disabled']) ? $uniset['menu_links_disabled'] : '';
+			$cat_id = isset($this->request->get['path']) ? explode('_', (string)$this->request->get['path']) : array();
+			$data['category_id'] = (int)array_pop($cat_id);
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[$category['name'],]]></search>
+			<add position="after" error="skip"><![CDATA['category_id' => $category['category_id'],]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[// Level 1]]></search>
+			<add position="replace" offset="-6" error="skip"><![CDATA[		
+					$children2 = $this->model_catalog_category->getCategories($child['category_id']);
+					$children_data2 = array();
+			
+					foreach ($children2 as $child2) {
+						if(isset($uniset['menu_links_show']) ? $child2['top'] : 1) {
+							$children_data2[] = array(
+								'name'  		=> $child2['name'],
+								'category_id'	=> $child2['category_id'],
+								'href'  		=> $this->url->link('product/category', 'path='.$category['category_id'].'_'.$child['category_id'].'_'.$child2['category_id']),
+							);
+						}
+					}
+			
+					if(isset($uniset['menu_links_show']) ? $child['top'] : 1) {
+						$children_data[] = array(
+						'name'       	=> $child['name'],
+						'category_id'	=> $child['category_id'],
+						'children'   	=> $children_data2,
+						'href'        	=> $this->url->link('product/category', 'path=' . $category['category_id'].'_'.$child['category_id']),
+						);
+					}
+				}
+				
+				// Level 1
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/common/home.php">
+		<operation>
+			<search><![CDATA[controller('common/header');]]></search>
+			<add position="before" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$data['menu_schema'] = isset($uniset['menu_schema']) ? $uniset['menu_schema'] : array();			
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/information/contact.php">
+		<operation>
+			<search><![CDATA[$this->config->get('config_fax');]]></search>
+			<add position="after" error="skip"><![CDATA[			
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$data['lang'] = array_merge($data, $this->language->load('unishop/unishop'));
+			
+			$data['phones'] = (isset($uniset['phones']) ? $uniset['phones'] : array());
+			$data['text_in_contacts'] = (isset($uniset[$lang_id]['text_in_contacts']) ? html_entity_decode($uniset[$lang_id]['text_in_contacts'], ENT_QUOTES, 'UTF-8') : '');
+			$data['contact_map'] = html_entity_decode($uniset['map'], ENT_QUOTES, 'UTF-8');
+			$data['shop_email'] = $this->config->get('config_email');
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/checkout/cart.php">
+		<operation>
+			<search><![CDATA[$json['total']]]></search>
+			<add position="before" error="skip"><![CDATA[
+			$json['total_items'] = $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0);
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[public function index() {]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA['checkout/checkout']]></search>
+			<add position="replace" error="skip"><![CDATA[isset($uniset['show_checkout']) ? 'checkout/uni_checkout' : 'checkout/checkout'
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[if ($product_info) {]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$this->load->model('tool/image');
+			$success_image = $product_info['image'] ? $this->model_tool_image->resize($product_info['image'], 100, 100) : '';
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[$json['success'] = sprintf($this->language->get('text_success'), $this->url->link('product/product', 'product_id=' . $this->request->post['product_id']), $product_info['name'], $this->url->link('checkout/cart'));]]></search>
+			<add position="replace" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$this->load->language('unishop/unishop');
+
+			if (isset($uniset['show_checkout'])) {
+				$json['success'] = sprintf($this->language->get('text_success'), $this->url->link('product/product', 'product_id=' . $this->request->post['product_id']), $product_info['name'], $this->url->link('checkout/uni_checkout', '', true));
+				$json['success_new'] = sprintf($this->language->get('text_success_new'), $success_image, $json['success'], $this->url->link('checkout/uni_checkout', '', true));
+			} else {
+				$json['success'] = sprintf($this->language->get('text_success'), $this->url->link('product/product', 'product_id=' . $this->request->post['product_id']), $product_info['name'], $this->url->link('checkout/cart'));
+				$json['success_new'] = sprintf($this->language->get('text_success_new'), $success_image, $json['success'], $this->url->link('checkout/cart'));
+			}
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/common/cart.php">
+		<operation>
+			<search><![CDATA[$data['text_items']]]></search>
+			<add position="before" error="skip"><![CDATA[
+			$data['items'] = $this->cart->countProducts() + (isset($this->session->data['vouchers']) ? count($this->session->data['vouchers']) : 0);
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[$product['cart_id'],]]></search>
+			<add position="after" error="skip"><![CDATA['id'   => $product['product_id'],]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[$this->language->get('text_loading');]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$data['show_checkout'] = isset($uniset['show_checkout']) ? $uniset['show_checkout'] : '';
+			
+			$data['cart_btn_icon'] = isset($uniset[$lang_id]['cart_btn_icon_incart']) ? $uniset[$lang_id]['cart_btn_icon'] : '';
+			$data['cart_btn_text'] = isset($uniset[$lang_id]['cart_btn_text_incart']) ? $uniset[$lang_id]['cart_btn_text'] : '';
+			
+			$data['cart_btn_icon_incart'] = isset($uniset[$lang_id]['cart_btn_icon_incart']) ? $uniset[$lang_id]['cart_btn_icon_incart'] : '';
+			$data['cart_btn_text_incart'] = isset($uniset[$lang_id]['cart_btn_text_incart']) ? $uniset[$lang_id]['cart_btn_text_incart'] : '';
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/common/footer.php">
+		<operation>
+			<search><![CDATA[$this->language->get('text_newsletter');]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			$data['lang'] = array_merge($data, $this->language->load('unishop/unishop'));
+			
+			$this->document->addScript('catalog/view/javascript/jquery/owl-carousel/owl.carousel.min.js');
+			$pagespeed = isset($_SERVER['HTTP_USER_AGENT']) && (strpos($_SERVER['HTTP_USER_AGENT'], 'Page Speed') !== false) ? true : false;
+			
+			$data['phone'] = $this->config->get('config_telephone');
+			$data['address'] = $this->config->get('config_address');
+			
+			$data['show_fly_menu'] = isset($uniset['show_fly_menu']) ? $uniset['show_fly_menu'] : '';
+			$data['fly_menu_product'] = isset($uniset['fly_menu_product']) ? $uniset['fly_menu_product'] : '';
+			$data['show_fly_cart'] = isset($uniset['show_fly_cart']) ? $uniset['show_fly_cart'] : '';
+			$data['show_fly_callback'] = isset($uniset['show_fly_callback']) ? $uniset['show_fly_callback'] : '';
+			$data['fly_callback_text'] = isset($uniset['show_fly_callback']) ? $uniset[$lang_id]['fly_callback_text'] : '';
+			
+			$data['col_icon1'] = $uniset[$lang_id]['footer_column_icon1'];
+			$data['col_icon2'] = $uniset[$lang_id]['footer_column_icon2'];
+			$data['col_icon3'] = $uniset[$lang_id]['footer_column_icon3'];
+			$data['col_icon4'] = $uniset[$lang_id]['footer_column_icon4'];
+			
+			$data['col_heading1'] = $uniset[$lang_id]['footer_column_heading1'];
+			$data['col_heading2'] = $uniset[$lang_id]['footer_column_heading2'];
+			$data['col_heading3'] = $uniset[$lang_id]['footer_column_heading3'];
+			$data['col_heading4'] = $uniset[$lang_id]['footer_column_heading4'];
+			
+			$data['footerlinks'] = isset($uniset[$lang_id]['footerlinks']) ? $uniset[$lang_id]['footerlinks'] : array();
+			
+			$data['footer_text'] = html_entity_decode($uniset[$lang_id]['footer_text'], ENT_QUOTES, 'UTF-8');
+			$data['footer_map'] = !$pagespeed ? html_entity_decode($uniset['footer_map'], ENT_QUOTES, 'UTF-8') : '';
+			
+			$data['socials'] = (isset($uniset['socials']) ? $uniset['socials'] : array());
+			
+			$data['payment_icons'] = (isset($uniset['payment_icons']) ? $uniset['payment_icons'] : array());
+			
+			$data['change_opt_img'] = isset($uniset['change_opt_img']) ? $uniset['change_opt_img'] : '';
+			$data['change_opt_img_p'] = isset($uniset['change_opt_img_p']) ? $uniset['change_opt_img_p'] : '';
+			
+			$data['show_search'] = isset($uniset['show_search']) ? $uniset['show_search'] : '';
+			$data['show_search_image'] = isset($uniset['show_search_image']) ? $uniset['show_search_image'] : '';
+			$data['show_search_description'] = isset($uniset['show_search_description']) ? $uniset['show_search_description'] : '';
+			$data['show_search_rating'] = isset($uniset['show_search_rating']) ? $uniset['show_search_rating'] : '';
+			$data['show_search_price'] = isset($uniset['show_search_price']) ? $uniset['show_search_price'] : '';
+			$data['search_limit'] = isset($uniset['search_limit']) ? $uniset['search_limit'] : '';
+			
+			$this->load->model('extension/extension');
+			$data['analytics'] = array();
+			$analytics = !$pagespeed ? $this->model_extension_extension->getExtensions('analytics') : array();
+			foreach ($analytics as $analytic) {
+				if ($this->config->get($analytic['code'] . '_status')) {
+					if(VERSION >= 2.3) {
+						$data['analytics'][] = $this->load->controller('extension/analytics/' . $analytic['code'], $this->config->get($analytic['code'] . '_status'));
+					} else {
+						$data['analytics'][] = $this->load->controller('analytics/' . $analytic['code']);
+					}
+				}
+			}
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/{module,extension/module}/slideshow.php">	
+		<operation>
+			<search><![CDATA[$this->load->model('tool/image');]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			$data['slideshow_effect'] = $uniset['slideshow_effect'];
+			$data['slideshow_delay'] = $uniset['slideshow_delay'];
+			
+			$data['hide_slideshow'] = isset($uniset['hide_slideshow']) ? $uniset['hide_slideshow'] : '';
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/{module,extension/module}/{slideshow,carousel,banner}*.php">	
+		<operation>
+			<search><![CDATA[$this->document->addStyle]]></search>
+			<add position="replace" error="skip"><![CDATA[//$this->document->addStyle]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/common/search.php">	
+		<operation>
+			<search><![CDATA[$this->load->language('common/search');]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$data = array();
+			$data['lang'] = array_merge($data, $this->language->load('unishop/unishop'));
+			
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$phrase_array = explode(",", isset($uniset[$lang_id]['search_phrase']) ? $uniset[$lang_id]['search_phrase'] : '');
+			$data['search_phrase'] = $phrase_array ? $phrase_array[array_rand($phrase_array)] : '';
+			
+			$this->load->model('catalog/product');
+			$data['categories'] = array();
+			$categories = $this->model_catalog_category->getCategories(0);
+			foreach ($categories as $category) {
+				$data['categories'][] = array(
+					'category_id' => $category['category_id'],
+					'name'        => $category['name'],
+				);
+			}
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/information/information.php">
+		<operation>
+			<search><![CDATA[public function index() {]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$data['menu_schema'] = isset($uniset['menu_schema']) ? $uniset['menu_schema'] : array();
+			
+			$this->document->addScript('catalog/view/javascript/jquery/magnific/jquery.magnific-popup.min.js');
+			$this->document->addStyle('catalog/view/javascript/jquery/magnific/magnific-popup.css');
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/product/{category,search,special,manufacturer}*.php">
+		<operation>
+			<search><![CDATA[public function index() {]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$data['menu_schema'] = (isset($uniset['menu_schema']) ? $uniset['menu_schema'] : array());
+			$data['subcategory_column'] = isset($uniset['subcategory_column']) ? implode(' ', $uniset['subcategory_column']) : '';
+			
+			$data['show_grid_button'] = isset($uniset['show_grid_button']) ? $uniset['show_grid_button'] : '';
+			$data['show_list_button'] = isset($uniset['show_list_button']) ? $uniset['show_list_button'] : '';
+			$data['show_compact_button'] = isset($uniset['show_compact_button']) ? $uniset['show_compact_button'] : '';
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/product/category.php">
+		<operation>
+			<search><![CDATA[$this->load->model('tool/image');]]></search>
+			<add position="after" error="skip"><![CDATA[
+			$data['cat_desc_pos'] = $uniset['cat_desc_pos'];
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[$data['categories'][] = array(]]></search>
+			<add position="after" error="skip"><![CDATA[
+			'thumb' => $this->model_tool_image->resize(($result['image'] == '' ? 'no_image.jpg' : $result['image']), $this->config->get((VERSION >= 2.2) ? $this->config->get('config_theme') . '_image_category_width' : 'config_image_category_width'), $this->config->get((VERSION >= 2.2) ? $this->config->get('config_theme') . '_image_category_height' : 'config_image_category_height')),
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/product/manufacturer.php">
+		<operation>
+			<search><![CDATA[public function info]]></search>
+			<add position="after" offset="1" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$data = isset($data) ? $data : array();
+			$data['lang'] = array_merge($data, $this->language->load('unishop/unishop'));
+			
+			$data['menu_schema'] = isset($uniset['menu_schema']) ? $uniset['menu_schema'] : array();
+			$data['show_grid_button'] = isset($uniset['show_grid_button']) ? $uniset['show_grid_button'] : '';
+			$data['show_list_button'] = isset($uniset['show_list_button']) ? $uniset['show_list_button'] : '';
+			$data['show_compact_button'] = isset($uniset['show_compact_button']) ? $uniset['show_compact_button'] : '';
+			
+			$data['text_select'] = $this->language->get('text_select');
+			
+			$data['show_quick_order'] = isset($uniset['show_quick_order']) ? $uniset['show_quick_order'] : '';	
+			$data['show_quick_order_text'] = isset($uniset['show_quick_order_text']) ? $uniset['show_quick_order_text'] : '';			
+			$data['quick_order_icon'] = isset($uniset['show_quick_order']) ? html_entity_decode($uniset[$lang_id]['quick_order_icon'], ENT_QUOTES, 'UTF-8') : '';	
+			$data['quick_order_title'] = isset($uniset['show_quick_order']) ? $uniset[$lang_id]['quick_order_title'] : '';
+			
+			$data['show_quick_order_quantity'] = isset($uniset['show_quick_order_quantity']) ? $uniset['show_quick_order_quantity'] : '';
+			
+			$data['show_attr'] = isset($uniset['show_attr']) ? $uniset['show_attr'] : '';
+			$data['show_attr_name'] = isset($uniset['show_attr_name']) ? $uniset['show_attr_name'] : '';
+			
+			$data['show_description'] = isset($uniset['show_description']) ? $uniset['show_description'] : '';
+			$data['show_description_alt'] = isset($uniset['show_description_alt']) ? $uniset['show_description_alt'] : '';
+			
+			$data['show_rating'] = isset($uniset['show_rating']) ? $uniset['show_rating'] : '';
+			$data['show_rating_count'] = isset($uniset['show_rating_count']) ? $uniset['show_rating_count'] : '';
+			
+			$data['show_stock_status'] = isset($uniset['show_stock_status']) ? $uniset['show_stock_status'] : '';
+			
+			$data['wishlist_btn_disabled'] = isset($uniset['wishlist_btn_disabled']) ? $uniset['wishlist_btn_disabled'] : '';
+			$data['compare_btn_disabled'] = isset($uniset['compare_btn_disabled']) ? $uniset['compare_btn_disabled'] : '';
+			
+			$currency = (VERSION >= 2.2) ? $this->session->data['currency'] : '';
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/{*,extension/module}/{category,product,search,special,manufacturer,latest,featured,bestseller,random,popular,bestsellerpercategory,latestpercategory,manufacturerpercategory,specialpercategory}.php">
+		<operation>
+			<search><![CDATA[public function index]]></search>
+			<add position="after" offset="1" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$data = isset($data) ? $data : array();
+			$data['lang'] = array_merge($data, $this->language->load('unishop/unishop'));
+
+			$data['shop_name'] = $this->config->get('config_name');
+			
+			$data['text_select'] = $this->language->get('text_select');
+			
+			$data['show_quick_order'] = isset($uniset['show_quick_order']) ? $uniset['show_quick_order'] : '';	
+			$data['show_quick_order_text'] = isset($uniset['show_quick_order_text']) ? $uniset['show_quick_order_text'] : '';			
+			$data['quick_order_icon'] = isset($uniset['show_quick_order']) ? html_entity_decode($uniset[$lang_id]['quick_order_icon'], ENT_QUOTES, 'UTF-8') : '';	
+			$data['quick_order_title'] = isset($uniset['show_quick_order']) ? $uniset[$lang_id]['quick_order_title'] : '';
+			
+			$data['show_quick_order_quantity'] = isset($uniset['show_quick_order_quantity']) ? $uniset['show_quick_order_quantity'] : '';
+			
+			$data['show_attr'] = (isset($uniset['show_attr']) ? $uniset['show_attr'] : '');
+			$data['show_attr_name'] = (isset($uniset['show_attr_name']) ? $uniset['show_attr_name'] : '');
+			
+			$data['show_description'] = isset($uniset['show_description']) ? $uniset['show_description'] : '';
+			$data['show_description_alt'] = isset($uniset['show_description_alt']) ? $uniset['show_description_alt'] : '';
+			
+			$data['show_rating'] = isset($uniset['show_rating']) ? $uniset['show_rating'] : '';
+			$data['show_rating_count'] = isset($uniset['show_rating_count']) ? $uniset['show_rating_count'] : '';
+			
+			$data['show_stock_status'] = isset($uniset['show_stock_status']) ? $uniset['show_stock_status'] : '';
+			
+			$data['wishlist_btn_disabled'] = isset($uniset['wishlist_btn_disabled']) ? $uniset['wishlist_btn_disabled'] : '';
+			$data['compare_btn_disabled'] = isset($uniset['compare_btn_disabled']) ? $uniset['compare_btn_disabled'] : '';
+			
+			$currency = (VERSION >= 2.2) ? $this->session->data['currency'] : '';
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[$data['products'][] = array(]]></search>
+			<add position="before" error="skip"><![CDATA[
+			$result = isset($product_info) && isset($setting) ? $product_info : $result;
+			
+			if (VERSION >= 2.2) {
+				$img_width = isset($this->request->get['product_id']) ? $this->config->get($this->config->get('config_theme') . '_image_related_width') : $this->config->get($this->config->get('config_theme') . '_image_product_width');
+				$img_height = isset($this->request->get['product_id']) ? $this->config->get($this->config->get('config_theme') . '_image_related_height') : $this->config->get($this->config->get('config_theme') . '_image_product_height');
+			} else {
+				$img_width = isset($this->request->get['product_id']) ? $this->config->get('config_image_related_width') : $this->config->get('config_image_product_width');
+				$img_height = isset($this->request->get['product_id']) ? $this->config->get('config_image_related_height') : $this->config->get('config_image_product_height');
+			}
+			
+			$img_width = isset($setting['width']) ? $setting['width'] : $img_width;
+			$img_height = isset($setting['height']) ? $setting['height'] : $img_height;
+			
+			$attribute_groups = (isset($uniset['show_attr']) ? $this->model_catalog_product->getProductAttributes($result['product_id'], $uniset['show_attr_group'], $uniset['show_attr_item']) : array());
+			
+			$options = array();
+			if (isset($uniset['show_options']) && $uniset['show_options_item'] > 0) {				
+				foreach ($this->model_catalog_product->getProductOptions($result['product_id'], $uniset['show_options_item']) as $option) {
+					$product_option_value_data = array();
+
+					foreach ($option['product_option_value'] as $option_value) {
+						if (!$option_value['subtract'] || ($option_value['quantity'] > 0)) {
+							if ((($this->config->get('config_customer_price') && $this->customer->isLogged()) || !$this->config->get('config_customer_price')) && (float)$option_value['price']) {
+								$option_price = $this->currency->format($this->tax->calculate($option_value['price'], $result['tax_class_id'], $this->config->get('config_tax') ? 'P' : false), $currency);
+							} else {
+								$option_price = false;
+							}
+							
+							$product_option_value_data[] = array(
+								'product_option_value_id' => $option_value['product_option_value_id'],
+								'option_value_id'         => $option_value['option_value_id'],
+								'name'                    => $option_value['name'],
+								'image'                   => $option_value['image'] ? $this->model_tool_image->resize($option_value['image'], 50, 50) : '',
+								'small' 				  => $this->model_tool_image->resize($option_value['image'], $img_width, $img_height),
+								'price'                   => $option_price,
+								'price_prefix'            => $option_value['price_prefix']
+							);
+						}
+					}
+
+					$options[] = array(
+						'product_option_id'    => $option['product_option_id'],
+						'product_option_value' => $product_option_value_data,
+						'option_id'            => $option['option_id'],
+						'name'                 => $option['name'],
+						'type'                 => $option['type'],
+						'value'                => $option['value'],
+						'required'             => $option['required']
+					);
+				}
+			}
+			
+			$additional_image = '';
+			
+			if(isset($uniset['show_additional_image'])) {
+				$results_img = $this->model_catalog_product->getProductImages($result['product_id']);
+				foreach ($results_img as $key => $result_img) {
+					$additional_image = $this->model_tool_image->resize($result_img['image'], $img_width, $img_height);
+					break;
+				}
+			}
+			
+			$stickers = array();
+			
+			$stickers_data = array(
+				'product_id' 	=> $result['product_id'],
+				'price'			=> $result['price'],
+				'special'		=> $result['special'],
+				'tax_class_id'  => $result['tax_class_id'],
+				'date_available'=> $result['date_available'],
+				'reward'		=> $result['reward'],
+				'upc'			=> $result['upc'],
+				'ean'			=> $result['ean'],
+				'jan'			=> $result['jan'],
+				'isbn'			=> $result['isbn'],
+				'mpn'			=> $result['mpn'],
+			);
+			
+			$stickers = $this->load->controller('unishop/stickers', $stickers_data);
+						
+			$cart_btn_icon_disabled = isset($uniset['cart_btn_icon_disabled_mobile']) ? $uniset[$lang_id]['cart_btn_icon_disabled'].' visible-xs visible-sm' : $uniset[$lang_id]['cart_btn_icon_disabled'];
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[$data['products'][] = array(]]></search>
+			<add position="after" error="skip"><![CDATA[
+			'additional_image'			=> $additional_image,
+			'num_reviews' 				=> $result['reviews'] ? $result['reviews'] : '',
+			'quantity' 					=> $result['quantity'],
+			'minimum' 					=> $result['minimum'],
+			'stock_status' 				=> isset($uniset['show_stock_status']) ? $result['stock_status'] : '',
+			'stock_status_id' 			=> isset($uniset['show_stock_status']) ? $result['stock_status_id'] : '',
+			'stickers' 					=> $stickers,
+			'price_value' 				=> $this->tax->calculate($result['price'], $result['tax_class_id'], $this->config->get('config_tax'))*$this->currency->getValue($currency),
+			'special_value' 			=> $this->tax->calculate($result['special'], $result['tax_class_id'], $this->config->get('config_tax'))*$this->currency->getValue($currency),
+			'attribute_groups' 			=> $attribute_groups,
+			'options'					=> $options,
+			'cart_btn_icon' 			=> $result['quantity'] > 0 ? $uniset[$lang_id]['cart_btn_icon'] : $cart_btn_icon_disabled,
+			'cart_btn_text' 			=> $result['quantity'] > 0 ? $uniset[$lang_id]['cart_btn_text'] : $uniset[$lang_id]['cart_btn_text_disabled'],
+			'cart_btn_class' 			=> $result['quantity'] <= 0 ? $uniset['cart_btn_disabled'] : '',
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/{module,extension/module}/{special,latest,featured,bestseller,random}.php">
+		<operation error="skip">
+			<search><![CDATA[$data['heading_title'] = $this->language->get('heading_title');]]></search>
+			<add position="replace" error="skip"><![CDATA[
+			$data['heading_title'] = isset($uniset['show_heading_in_admin']) && isset($setting['name']) ? $setting['name'] : $this->language->get('heading_title');
+			$module_type_view = isset($uniset['module_type_view']) ? $uniset['module_type_view'] : array();
+			$data['type_view'] = isset($setting['name']) && in_array($setting['name'], $module_type_view) ? 'grid' : 'carousel';
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/product/product.php">
+		<operation error="skip">
+			<search><![CDATA[image_popup_height')),]]></search>
+			<add position="after" error="skip"><![CDATA[
+			'small' => $this->model_tool_image->resize($result['image'], (VERSION >= 2.2) ? $this->config->get($this->config->get('config_theme') . '_image_thumb_width') : $this->config->get('config_image_thumb_width'), (VERSION >= 2.2) ? $this->config->get($this->config->get('config_theme') . '_image_thumb_height') : $this->config->get('config_image_thumb_height')),
+			]]></add>
+		</operation>	
+		<operation error="skip">
+			<search><![CDATA[$data['images'] = array();]]></search>
+			<add position="before" error="skip"><![CDATA[
+			$data['small'] = $this->model_tool_image->resize($product_info['image'] ? $product_info['image'] : 'no_image.jpg', (VERSION >= 2.2) ? $this->config->get($this->config->get('config_theme') . '_image_additional_width') : $this->config->get('config_image_additional_width'), (VERSION >= 2.2) ? $this->config->get($this->config->get('config_theme') . '_image_additional_height') : $this->config->get('config_image_additional_height'));
+			]]></add>
+		</operation>
+		<operation error="skip">
+			<search><![CDATA[$this->model_tool_image->resize($option_value['image'], 50, 50),]]></search>
+			<add position="replace" error="skip"><![CDATA[$option_value['image'] ? $this->model_tool_image->resize($option_value['image'], 50, 50) : '',]]></add>
+		</operation>
+		<operation error="skip">
+			<search><![CDATA['price'                   => $price,]]></search>
+			<add position="before" error="skip"><![CDATA[
+			'small' => $this->model_tool_image->resize($option_value['image'], (VERSION >= 2.2) ? $this->config->get($this->config->get('config_theme') . '_image_thumb_width') : $this->config->get('config_image_thumb_width'), (VERSION >= 2.2) ? $this->config->get($this->config->get('config_theme') . '_image_thumb_height') : $this->config->get('config_image_thumb_height')),
+			'full' => $this->model_tool_image->resize($option_value['image'], (VERSION >= 2.2) ? $this->config->get($this->config->get('config_theme') . '_image_popup_width') : $this->config->get('config_image_popup_width'), (VERSION >= 2.2) ? $this->config->get($this->config->get('config_theme') . '_image_popup_height') : $this->config->get('config_image_popup_height')),
+			]]></add>
+		</operation>
+		<operation error="skip">
+			<search><![CDATA[if ($product_info['quantity'] <= 0) {]]></search>
+			<add position="before" error="skip"><![CDATA[
+			$lang = array_merge($data, $this->language->load('unishop/unishop'));
+			$data['lang'] = array_merge($lang, $this->language->load('unishop/request'));
+			
+			$viewed_id = isset($this->request->cookie['viewed_id']) ? explode(',', $this->request->cookie['viewed_id']) : array();
+			
+			if (!in_array($product_info['product_id'], $viewed_id)) {
+				array_unshift($viewed_id, $product_info['product_id']);
+				setcookie('viewed_id', implode(',', array_slice($viewed_id, 0, 20)), time()+86400, '/');
+			}
+			
+			$currency = (VERSION >= 2.2) ? $this->session->data['currency'] : '';
+			$data['currency_code'] = (VERSION >= 2.2) ? $this->session->data['currency'] : $this->currency->getCode();
+			$data['p_value'] = $this->tax->calculate($product_info['special'] ? $product_info['special'] : $product_info['price'], $product_info['tax_class_id'], $this->config->get('config_tax'))*$this->currency->getValue($currency);
+			
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$data['show_quick_order'] = isset($uniset['show_quick_order']) ? $uniset['show_quick_order'] : '';
+			$data['show_quick_order_text_product'] = isset($uniset['show_quick_order_text_product']) ? $uniset['show_quick_order_text_product'] : '';
+			$data['quick_order_icon'] = isset($uniset['show_quick_order']) ? html_entity_decode($uniset[$lang_id]['quick_order_icon'], ENT_QUOTES, 'UTF-8') : '';
+			$data['quick_order_title'] = isset($uniset['show_quick_order']) ? $uniset[$lang_id]['quick_order_title'] : '';
+			
+			$data['show_quick_order_quantity'] = isset($uniset['show_quick_order_quantity']) ? $uniset['show_quick_order_quantity'] : '';
+			
+			$data['text_related'] = isset($uniset[$lang_id]['title_related']) ? $uniset[$lang_id]['title_related'] : $this->language->get('text_related');
+			
+			$data['quantity'] = $product_info['quantity'];
+			
+			$data['show_product_attr_group'] = $uniset['show_product_attr_group'];
+			$data['show_product_attr_item'] = $uniset['show_product_attr_item'];
+			
+			$data['show_product_attr'] = isset($uniset['show_product_attr']) ? $uniset['show_product_attr'] : '';
+			
+			$data['cart_btn_icon_mobile'] = $product_info['quantity'] <= 0 && isset($uniset['cart_btn_icon_disabled_mobile']) ? $uniset['cart_btn_icon_disabled_mobile'] : '';
+			$data['cart_btn_icon'] = $product_info['quantity'] > 0 ? $uniset[$lang_id]['cart_btn_icon'] : $uniset[$lang_id]['cart_btn_icon_disabled'];
+			$data['cart_btn_text'] = $product_info['quantity'] > 0 ? $uniset[$lang_id]['cart_btn_text'] : $uniset[$lang_id]['cart_btn_text_disabled'];
+			
+			$data['cart_btn_class'] = $product_info['quantity'] <= 0 ? $uniset['cart_btn_disabled'] : '';
+			
+			$data['wishlist_btn_disabled'] = isset($uniset['wishlist_btn_disabled']) ? $uniset['wishlist_btn_disabled'] : '';
+			$data['compare_btn_disabled'] = isset($uniset['compare_btn_disabled']) ? $uniset['compare_btn_disabled'] : '';
+			
+			$data['sku'] = $product_info['sku'];
+			$data['upc'] = $product_info['upc'];
+			$data['ean'] = $product_info['ean'];
+			$data['jan'] = $product_info['jan'];
+			$data['isbn'] = $product_info['isbn'];
+			$data['mpn'] = $product_info['mpn'];
+			$data['location'] = $product_info['location'];
+			
+			$data['sku_text'] = $uniset[$lang_id]['sku_text'];
+			$data['upc_text'] = !isset($uniset['upc_as_sticker']) ? $uniset[$lang_id]['upc_text'] : '';
+			$data['ean_text'] = !isset($uniset['ean_as_sticker']) ? $uniset[$lang_id]['ean_text'] : '';
+			$data['jan_text'] = !isset($uniset['jan_as_sticker']) ? $uniset[$lang_id]['jan_text'] : '';
+			$data['isbn_text'] = !isset($uniset['isbn_as_sticker']) ? $uniset[$lang_id]['isbn_text'] : '';
+			$data['mpn_text'] = !isset($uniset['mpn_as_sticker']) ? $uniset[$lang_id]['mpn_text'] : '';
+			$data['location_text'] = $uniset[$lang_id]['location_text'];
+			
+			$data['show_stock_status'] = isset($uniset['show_stock_status']) ? $uniset['show_stock_status'] : '';
+			$data['stock_status'] = $product_info['stock_status'];
+			$data['stock_status_id'] = $product_info['stock_status_id'];
+			
+			$data['product_banners'] = (isset($uniset[$lang_id]['product_banners']) ? $uniset[$lang_id]['product_banners'] : array());
+			
+			$data['show_additional_tab'] = isset($uniset['show_additional_tab']) ? $uniset['show_additional_tab'] : '';
+			$data['additional_tab_icon'] = isset($uniset['show_additional_tab']) ? $uniset[$lang_id]['additional_tab_icon'] : '';	
+			$data['additional_tab_title'] = isset($uniset['show_additional_tab']) ? $uniset[$lang_id]['additional_tab_title'] : '';	
+			$data['additional_tab_text'] = isset($uniset['show_additional_tab']) ? html_entity_decode($uniset[$lang_id]['additional_tab_text'], ENT_QUOTES, 'UTF-8') : '';
+			
+			$data['show_manufacturer'] = '';
+			if(isset($uniset['show_manufacturer'])) {
+				
+				$data['manufacturer_position'] = (isset($uniset['manufacturer_position']) ? $uniset['manufacturer_position'] : '');
+				$data['manufacturer_title'] = $uniset[$lang_id]['manufacturer_title'];
+				
+				$this->load->model('tool/image');
+				$manufacturer_descr = $this->model_catalog_manufacturer->getManufacturer($product_info['manufacturer_id']);
+				
+				if($manufacturer_descr) {
+					$data['show_manufacturer'] = $uniset['show_manufacturer'];
+				
+					if ($manufacturer_descr['image']) {
+						$manufacturer_image = $this->model_tool_image->resize($manufacturer_descr['image'], $uniset['manufacturer_logo_w'], $uniset['manufacturer_logo_h']);
+					} else {
+						$manufacturer_image = '';
+					}
+			
+					$data['manufacturer_name'] = $manufacturer_descr['name'];
+					$data['manufacturer_description'] = isset($manufacturer_descr['description']) ? utf8_substr(strip_tags(html_entity_decode($manufacturer_descr['description'], ENT_QUOTES, 'UTF-8')), 0, $uniset['manufacturer_text_length']) : '';
+					$data['manufacturer_image'] = $manufacturer_image;
+					$data['manufacturer_href'] = $this->url->link('product/manufacturer/info&manufacturer_id=' . $product_info['manufacturer_id']);
+				}
+			}
+			
+			$data['show_rating'] = (isset($uniset['show_rating']) ? $uniset['show_rating'] : '');
+			$data['show_rating_count'] = (isset($uniset['show_rating_count']) ? $uniset['show_rating_count'] : '');
+			
+			$data['stickers'] = array();
+			
+			$stickers_data = array(
+				'product_id' 	=> $product_info['product_id'],
+				'price'			=> $product_info['price'],
+				'special'		=> $product_info['special'],
+				'tax_class_id'  => $product_info['tax_class_id'],
+				'date_available'=> $product_info['date_available'],
+				'reward'		=> $product_info['reward'],
+				'upc'			=> $product_info['upc'],
+				'ean'			=> $product_info['ean'],
+				'jan'			=> $product_info['jan'],
+				'isbn'			=> $product_info['isbn'],
+				'mpn'			=> $product_info['mpn'],
+			);
+			
+			$data['stickers'] = $this->load->controller('unishop/stickers', $stickers_data);
+			
+			$data['text_description'] = $this->language->get('text_description');
+			
+			$data['show_plus_minus_review'] = (isset($uniset['show_plus_minus_review']) ? $uniset['show_plus_minus_review'] : '');
+			$data['plus_minus_review_required'] = (isset($uniset['plus_minus_review_required']) ? $uniset['plus_minus_review_required'] : '');
+			
+			$data['auto_related'] = $this->load->controller('unishop/auto_related');
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[public function review() {]]></search>
+			<add position="after"><![CDATA[
+			$this->language->load('unishop/unishop');
+			$this->load->language('product/product');
+			$data['text_admin_reply'] = $this->language->get('text_admin_reply');
+			$data['text_plus'] = $this->language->get('text_plus');
+			$data['text_minus'] = $this->language->get('text_minus');
+			$data['text_comment'] = $this->language->get('text_comment');
+			$data['text_write'] = $this->language->get('text_write');
+			
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			
+			$data['show_plus_minus_review'] = isset($uniset['show_plus_minus_review']) ? $uniset['show_plus_minus_review'] : '';
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA['text'       => nl2br($result['text']),]]></search>
+			<add position="after"><![CDATA[
+			'plus'      	=> nl2br($result['plus']),
+			'minus'       	=> nl2br($result['minus']),
+			'admin_reply'	=> nl2br($result['admin_reply']),]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[if ((utf8_strlen($this->request->post['text']) < 25)]]></search>
+			<add position="before"><![CDATA[
+			$this->language->load('unishop/unishop');
+			
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			
+			$data['plus_minus_review_required'] = '';
+			if(isset($uniset['show_plus_minus_review']) && isset($uniset['plus_minus_review_required'])) {
+				if ((utf8_strlen($this->request->post['plus']) < 3) || (utf8_strlen($this->request->post['plus']) > 1000)) {
+					$json['error'] = $this->language->get('error_plus');
+				}
+				if ((utf8_strlen($this->request->post['minus']) < 3) || (utf8_strlen($this->request->post['minus']) > 1000)) {
+					$json['error'] = $this->language->get('error_minus');
+				}
+			}
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/product/compare.php">
+		<operation error="skip">
+			<search><![CDATA[$data['products'][$product_id] = array(]]></search>
+			<add position="before" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			$lang_id = $this->config->get('config_language_id');
+			
+			$cart_btn_class = $product_info['quantity'] <= 0 ? ' disabled' : '';
+			$cart_btn_class .= $product_info['quantity'] <= 0 && isset($uniset['cart_btn_disabled']) ? ' disabled2' : '';
+			]]></add>
+		</operation>
+		<operation error="skip">
+			<search><![CDATA[$product_info['manufacturer'],]]></search>
+			<add position="after" error="skip"><![CDATA[
+			'quantity' 				=> $product_info['quantity'],
+			'cart_btn_disabled' 	=> $product_info['quantity'] <= 0 && isset($uniset['cart_btn_disabled']) ? $uniset['cart_btn_disabled'] : '',
+			'cart_btn_icon_mobile' 	=> $product_info['quantity'] <= 0 && isset($uniset['cart_btn_icon_disabled_mobile']) ? $uniset['cart_btn_icon_disabled_mobile'] : '',
+			'cart_btn_icon' 		=> $product_info['quantity'] > 0 ? $uniset[$lang_id]['cart_btn_icon'] : $uniset[$lang_id]['cart_btn_icon_disabled'],
+			'cart_btn_text' 		=> $product_info['quantity'] > 0 ? $uniset[$lang_id]['cart_btn_text'] : $uniset[$lang_id]['cart_btn_text_disabled'],
+			'cart_btn_class' 		=> $cart_btn_class,
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/{module,extension/module}/{filterpro,ocfilter}.php">
+		<operation error="skip">
+			<search><![CDATA[/theme/default/]]></search>
+			<add position="replace" error="skip"><![CDATA[/theme/unishop/]]></add>
+		</operation>
+	</file>
+	<file path="catalog/model/design/layout.php">
+		<operation>
+			<search><![CDATA[return $query->rows;]]></search>
+			<add position="before" error="skip"><![CDATA[
+			$this->load->model('unishop/setting');
+			$uniset = $this->model_unishop_setting->getSetting();
+			
+			if(isset($uniset['home_banners_position']) && $uniset['home_banners_position'] == $position && $layout_id == 1) {
+				$query->rows[] = array(
+					'layout_module_id' => 99999999,
+					'layout_id' => 1,
+					'code' => 'uni_homebanner',
+					'position' => $uniset['home_banners_position'],
+					'sort_order' => $uniset['home_banners_position_n']
+				);
+				
+				$this->config->set('uni_homebanner_status', 1);
+				
+				foreach ($query->rows as $key => $value) {
+					$sort[$key] = $value['sort_order'];
+				}
+			
+				array_multisort($sort, SORT_ASC, $query->rows);
+			}
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/model/catalog/product.php">
+		<operation>
+			<search><![CDATA[$query->row['stock_status'],]]></search>
+			<add position="after" error="skip"><![CDATA['stock_status_id' => $query->row['stock_status_id'],]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[getProductAttributes($product_id)]]></search>
+			<add position="replace" error="skip"><![CDATA[getProductAttributes($product_id, $limit1 = 1000, $limit2 = 1000)]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[ORDER BY ag.sort_order, agd.name"]]></search>
+			<add position="replace" error="skip"><![CDATA[ORDER BY ag.sort_order, agd.name LIMIT ".(int)$limit1]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[ORDER BY a.sort_order, ad.name"]]></search>
+			<add position="replace" error="skip"><![CDATA[ORDER BY a.sort_order, ad.name LIMIT ".(int)$limit2]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[getProductOptions($product_id)]]></search>
+			<add position="replace" error="skip"><![CDATA[getProductOptions($product_id, $limit = 1000)]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[ORDER BY o.sort_order"]]></search>
+			<add position="replace" error="skip"><![CDATA[ORDER BY o.sort_order LIMIT ".(int)$limit]]></add>
+		</operation>
+	</file>
+	<file path="catalog/model/catalog/review.php">
+		<operation>
+			<search><![CDATA[, rating =]]></search>
+			<add position="replace"><![CDATA[, plus = '".$this->db->escape(strip_tags($data['plus']))."', minus = '".$this->db->escape(strip_tags($data['minus']))."', admin_reply = '', rating =]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[r.author, r.rating, r.text,]]></search>
+			<add position="replace"><![CDATA[r.author, r.rating, r.text, r.plus, r.minus, r.admin_reply,]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[$this->load->language('mail/review');]]></search>
+			<add position="after"><![CDATA[$this->load->language('unishop/unishop');]]></add>
+		</operation>
+		<operation>
+            <search><![CDATA[$message .= html_entity_decode($data['text'], ENT_QUOTES, 'UTF-8') . "\n\n";]]></search>
+            <add position="after"><![CDATA[
+			$message .= $data['plus'] ? $this->language->get('text_plus')."\n".html_entity_decode($data['plus'], ENT_QUOTES, 'UTF-8')."\n\n" : '';
+			$message .= $data['minus'] ? $this->language->get('text_minus')."\n".html_entity_decode($data['minus'], ENT_QUOTES, 'UTF-8')."\n\n" : '';
+			$message .= $this->config->get('config_secure') ? HTTPS_SERVER.'admin/index.php?route=catalog/review/edit&review_id='.$review_id : HTTP_SERVER.'admin/index.php?route=catalog/review/edit&review_id='.$review_id;
+			]]></add>
+           </operation>
+	</file>
+</modification>
