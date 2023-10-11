@@ -232,13 +232,13 @@
 			
 			$this->load->language('unishop/unishop');
 
-			if (isset($uniset['show_checkout'])) {
+		//	if (isset($uniset['show_checkout'])) {
 				$json['success'] = sprintf($this->language->get('text_success'), $this->url->link('product/product', 'product_id=' . $this->request->post['product_id']), $product_info['name'], $this->url->link('checkout/uni_checkout', '', true));
-				$json['success_new'] = sprintf($this->language->get('text_success_new'), $success_image, $json['success'], $this->url->link('checkout/uni_checkout', '', true));
-			} else {
-				$json['success'] = sprintf($this->language->get('text_success'), $this->url->link('product/product', 'product_id=' . $this->request->post['product_id']), $product_info['name'], $this->url->link('checkout/cart'));
-				$json['success_new'] = sprintf($this->language->get('text_success_new'), $success_image, $json['success'], $this->url->link('checkout/cart'));
-			}
+				$json['success_new'] = sprintf($this->language->get('text_success_new'), $success_image, $json['success'], '/unicheckout/');
+		//	} else {
+		//		$json['success'] = sprintf($this->language->get('text_success'), $this->url->link('product/product', 'product_id=' . $this->request->post['product_id']), $product_info['name'], $this->url->link('checkout/cart'));
+		//		$json['success_new'] = sprintf($this->language->get('text_success_new'), $success_image, $json['success'], $this->url->link('checkout/cart'));
+		//	}
 			]]></add>
 		</operation>
 	</file>
