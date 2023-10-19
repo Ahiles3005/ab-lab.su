@@ -296,7 +296,7 @@ class ControllerStartupSeoPro extends Controller {
 	}
 
 	private function validate() {
-		if (isset($this->request->get['route']) && $this->request->get['route'] == 'error/not_found') {
+		if (isset($this->request->get['route']) && ($this->request->get['route'] == 'error/not_found' || $this->request->get['route'] === 'checkout/uni_checkout') ) {
 			return;
 		}
 		if (ltrim($this->request->server['REQUEST_URI'], '/') =='sitemap.xml') {
